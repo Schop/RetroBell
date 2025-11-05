@@ -1,0 +1,22 @@
+# PlatformIO
+.pio/
+.vscode/
+
+# Build artifacts
+build/
+*.bin
+*.elf
+*.map
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+
+# Logs
+*.log
+
+# Personal configuration (optional - uncomment if you want to exclude config)
+# data/config.json
