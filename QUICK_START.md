@@ -12,9 +12,14 @@ Get your RetroBell system up and running in minutes!
 
 ## 🚀 Quick Setup (5 Minutes)
 
-### Step 1: Edit Configuration
+### Step 1: Configure WiFi Credentials
 
-Open `data/config.json` and update with your Wi-Fi credentials:
+1. Copy the template file:
+   ```bash
+   copy data\config.json.template data\config.json
+   ```
+
+2. Edit `data/config.json` with your Wi-Fi credentials:
 
 ```json
 {

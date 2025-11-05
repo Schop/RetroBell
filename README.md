@@ -99,7 +99,24 @@ IDLE → RINGING (play ring tone) → IN_CALL
 
 ## 📝 Configuration
 
-### First-Time Setup
+### Initial Setup
+
+**Before first upload:**
+
+1. Copy `data/config.json.template` to `data/config.json`
+2. Edit `data/config.json` with your WiFi credentials:
+
+```json
+{
+  "number": -1,
+  "wifi_ssid": "YourWiFiNetwork",
+  "wifi_password": "YourPassword"
+}
+```
+
+3. Keep `"number": -1` for first-time setup
+
+### First-Time Phone Number Setup
 
 When you first power on the phone with `"number": -1` in config.json:
 
