@@ -21,7 +21,7 @@ RetroBell transforms vintage rotary phones into a modern VoIP system using ESP32
 ## 📁 Project Structure
 
 ```
-housephone/
+RetroBell/
 ├── src/
 │   ├── main.cpp           # Main program & state machine
 │   ├── Pins.h             # GPIO pin definitions
