@@ -18,5 +18,5 @@ Thumbs.db
 # Logs
 *.log
 
-# Personal configuration (optional - uncomment if you want to exclude config)
-# data/config.json
+# Personal configuration - contains WiFi credentials
+data/config.json
