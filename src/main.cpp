@@ -11,6 +11,7 @@
  * - Automatic peer discovery
  * - Interactive first-time setup
  * 
+ * "Who you gonna call?"
  */
 
 #include "State.h"

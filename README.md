@@ -2,7 +2,7 @@
 
 A retro rotary phone system using ESP32-S3 microcontrollers with peer-to-peer communication via ESP-NOW.
 
-**"Where vintage meets voice"**
+**"Who you gonna call?"**
 
 ## 🎯 Overview
 

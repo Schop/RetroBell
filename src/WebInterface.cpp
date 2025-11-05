@@ -60,6 +60,7 @@ void handleRoot() {
   
   // Header
   html += "<h1>🔔 RetroBell Status</h1>";
+  html += "<p style='color: #666; font-style: italic;'>Who you gonna call?</p>";
   
   // Current State
   html += "<h2>Current State</h2>";

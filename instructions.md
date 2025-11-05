@@ -1,6 +1,6 @@
 # RetroBell - ESP32 Rotary VoIP Phone
 
-**"Where vintage meets voice"**
+**"Who you gonna call?"**
 
 This project turns a classic rotary telephone into a modern, network-connected VoIP phone using an ESP32-S3 microcontroller.
 

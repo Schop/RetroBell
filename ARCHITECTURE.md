@@ -1,6 +1,6 @@
 # RetroBell - Code Architecture Overview
 
-**"Where vintage meets voice"**
+**"Who you gonna call?"**
 
 ## 📐 System Design
 

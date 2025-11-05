@@ -1,6 +1,6 @@
 # RetroBell - Quick Start Guide
 
-**"Where vintage meets voice"**
+**"Who you gonna call?"**
 
 Get your RetroBell system up and running in minutes!
 
