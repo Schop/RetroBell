@@ -29,6 +29,7 @@ const char* getStateName(PhoneState state) {
     case RINGING: return "RINGING";
     case IN_CALL: return "IN_CALL";
     case CALL_FAILED: return "CALL_FAILED";
+    case CALL_BUSY: return "CALL_BUSY";
     default: return "UNKNOWN";
   }
 }

@@ -326,6 +326,29 @@ void sendCallAccept(int targetNumber) {
 }
 
 /*
+ * Send Call Busy
+ * 
+ * Responds to incoming call with busy signal.
+ * Sent when receiving a call while already in another call.
+ */
+void sendCallBusy(int targetNumber) {
+  Serial.print("Sending busy signal to: ");
+  Serial.println(targetNumber);
+  
+  for (int i = 0; i < peerCount; i++) {
+    if (peers[i].registered && peers[i].number == targetNumber) {
+      Message msg;
+      msg.type = MSG_CALL_BUSY;
+      msg.fromNumber = getPhoneNumber();
+      msg.toNumber = targetNumber;
+      
+      esp_now_send(peers[i].macAddress, (uint8_t*)&msg, sizeof(msg));
+      return;
+    }
+  }
+}
+
+/*
  * Send Call End
  * 
  * Terminates an active call.
@@ -440,6 +463,14 @@ void handleIncomingMessage(const uint8_t *mac, const uint8_t *data, int len) {
       }
       Serial.print("Incoming call from: ");
       Serial.println(msg->fromNumber);
+      
+      // Check if we're already in a call
+      if (getCurrentState() == IN_CALL || getCurrentState() == RINGING) {
+        Serial.println("Already busy, sending busy signal");
+        sendCallBusy(msg->fromNumber);
+        return;
+      }
+      
       currentCallPeer = msg->fromNumber;
       changeState(RINGING);
       break;
@@ -448,6 +479,13 @@ void handleIncomingMessage(const uint8_t *mac, const uint8_t *data, int len) {
       if (msg->toNumber != getPhoneNumber()) return;
       Serial.println("Call accepted!");
       changeState(IN_CALL);
+      break;
+      
+    case MSG_CALL_BUSY:
+      if (msg->toNumber != getPhoneNumber()) return;
+      Serial.println("Called party is busy");
+      currentCallPeer = -1;
+      changeState(CALL_BUSY);
       break;
       
     case MSG_CALL_REJECT:

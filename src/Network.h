@@ -40,6 +40,7 @@ enum MessageType {
   MSG_CALL_REQUEST,   // "I'm calling you"
   MSG_CALL_ACCEPT,    // "I answered your call"
   MSG_CALL_REJECT,    // "I declined your call"
+  MSG_CALL_BUSY,      // "I'm already in a call"
   MSG_CALL_END,       // "I'm hanging up"
   MSG_AUDIO_DATA      // Voice data packet (for future audio streaming)
 };
@@ -73,6 +74,9 @@ bool sendCallRequest(int targetNumber);
 
 // Accept an incoming call
 void sendCallAccept(int targetNumber);
+
+// Reject an incoming call with busy signal
+void sendCallBusy(int targetNumber);
 
 // End an active call
 void sendCallEnd(int targetNumber);

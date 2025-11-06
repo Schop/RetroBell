@@ -33,7 +33,8 @@ enum PhoneState {
   CALLING,    // Waiting for peer to answer
   RINGING,    // Incoming call, ringing
   IN_CALL,    // Active call in progress
-  CALL_FAILED // Call failed (number not found, etc.)
+  CALL_FAILED,// Call failed (number not found, etc.)
+  CALL_BUSY   // Called phone is busy (already in a call)
 };
 
 // Change phone state and log to serial

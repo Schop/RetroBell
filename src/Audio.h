@@ -13,6 +13,7 @@ void playDialTone();
 void playRingbackTone();
 void playRingTone();
 void playErrorTone();  // Fast busy tone for invalid number
+void playBusyTone();   // Busy tone for when called phone is in use
 void stopTone();
 void updateToneGeneration(); // Call this in loop() to keep tones playing
 

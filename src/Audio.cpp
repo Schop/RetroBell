@@ -28,7 +28,8 @@ enum ToneType {
   TONE_DIAL,
   TONE_RINGBACK,
   TONE_RING,
-  TONE_ERROR  // Fast busy tone for errors
+  TONE_ERROR,  // Fast busy tone for errors (250ms cadence)
+  TONE_BUSY    // Normal busy tone (500ms cadence)
 };
 
 ToneType currentTone = TONE_NONE;
@@ -284,6 +285,23 @@ void playErrorTone() {
 }
 
 /*
+ * Play Busy Tone
+ * Normal busy signal for when called party is already in a call
+ * Pattern: 480Hz + 620Hz dual tone, 500ms ON, 500ms OFF (normal busy)
+ * Output: RIGHT channel (handset)
+ * 
+ * This is the standard "busy signal" indicating the called phone
+ * is currently in use (off-hook or already in another call).
+ */
+void playBusyTone() {
+  currentTone = TONE_BUSY;
+  toneStartTime = millis();
+  lastCadenceTime = millis();
+  cadenceOn = true;
+  Serial.println("Playing busy tone");
+}
+
+/*
  * Stop All Tones
  * Clears audio buffers and stops tone generation
  */
@@ -380,6 +398,35 @@ void updateToneGeneration() {
       
       if (cadenceOn) {
         generateTone(buffer, BUFFER_SIZE, 480.0, false, true);
+      } else {
+        memset(buffer, 0, BUFFER_SIZE * sizeof(int16_t)); // Silence
+      }
+      i2s_write(I2S_PORT, buffer, BUFFER_SIZE * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+      break;
+      
+    case TONE_BUSY:
+      // Normal Busy: 480Hz + 620Hz, 500ms on, 500ms off, on RIGHT channel (handset)
+      // Indicates called party is already in use
+      if (cadenceOn && (currentTime - lastCadenceTime > 500)) {
+        // Been on for 500ms, switch to off
+        cadenceOn = false;
+        lastCadenceTime = currentTime;
+      } else if (!cadenceOn && (currentTime - lastCadenceTime > 500)) {
+        // Been off for 500ms, switch to on
+        cadenceOn = true;
+        lastCadenceTime = currentTime;
+      }
+      
+      if (cadenceOn) {
+        // Generate dual tone: 480Hz + 620Hz
+        int16_t buffer1[BUFFER_SIZE];
+        int16_t buffer2[BUFFER_SIZE];
+        generateTone(buffer1, BUFFER_SIZE, 480.0, false, true);
+        generateTone(buffer2, BUFFER_SIZE, 620.0, false, true);
+        // Mix the two tones
+        for (size_t i = 0; i < BUFFER_SIZE; i++) {
+          buffer[i] = (buffer1[i] + buffer2[i]) / 2;
+        }
       } else {
         memset(buffer, 0, BUFFER_SIZE * sizeof(int16_t)); // Silence
       }

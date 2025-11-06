@@ -160,6 +160,12 @@ void loop() {
       // User must hang up to return to IDLE
       break;
       
+    case CALL_BUSY:
+      // Called phone is busy (already in a call) - play normal busy tone
+      playBusyTone();
+      // User must hang up to return to IDLE
+      break;
+      
     case IN_CALL:
       stopTone(); // Stop any tones when in call
       

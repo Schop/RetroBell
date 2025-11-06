@@ -23,10 +23,10 @@ The RetroBell firmware is organized into modular components, each handling a spe
     └────────┘ └────────┘ └────────┘ └────────┘ └────────┘
         │          │          │          │          │
         ▼          ▼          ▼          ▼          │
-    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐   │
-    │  I2S   │ │  GPIO  │ │  GPIO  │ │ESP-NOW │   │
-    │Hardware│ │Hardware│ │Hardware│ │Protocol│   │
-    └────────┘ └────────┘ └────────┘ └────────┘   │
+    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐     │
+    │  I2S   │ │  GPIO  │ │  GPIO  │ │ESP-NOW │     │
+    │Hardware│ │Hardware│ │Hardware│ │Protocol│     │
+    └────────┘ └────────┘ └────────┘ └────────┘     │
                                                     │
                                                     ▼
                                             ┌──────────────┐

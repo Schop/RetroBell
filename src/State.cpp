@@ -50,6 +50,7 @@ void changeState(PhoneState newState) {
     case RINGING: Serial.println("RINGING"); break;
     case IN_CALL: Serial.println("IN_CALL"); break;
     case CALL_FAILED: Serial.println("CALL_FAILED"); break;
+    case CALL_BUSY: Serial.println("CALL_BUSY"); break;
   }
 }
 
