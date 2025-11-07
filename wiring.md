@@ -1,4 +1,3 @@
-Here’s a one‑page wiring “diagram” you can follow. It’s for Variant A with two MAX98357A amps per phone (one for the handset, one in the base for ring), an electret capsule in the handset, and a MAX9814 preamp in the base. Pin map is for ESP32‑S3‑DevKitC‑1. Notes for classic ESP32 are included where it matters.
 
 Per phone: connections at a glance
 - ESP32-S3-DevKitC-1
@@ -82,9 +81,62 @@ Hook switch wiring
 - Optional RC debounce: 100 nF from GPIO 18 to GND
 
 Rotary Dial wiring
-- Most rotary dials have at least two terminals for pulsing. Connect these to the ESP32 ROTARY_PULSE pin (GPIO 15) and GND.
-- Many dials also have an "off-normal" switch with two additional terminals. This switch closes when you begin to turn the dial and opens when it returns to rest. Connect these to ROTARY_ACTIVE (GPIO 14) and GND. This signal is useful for ignoring hook switch activity while dialing.
-- Enable internal pull-ups on both GPIO 14 and 15.
+
+Rotary dials come in two common configurations: **3-wire** (shared common) and **4-wire** (separate returns). Both work with the same ESP32 code - only the physical wiring differs.
+
+**How to identify your dial type:**
+Use a multimeter in continuity mode:
+- With dial at rest: Find contacts that are **closed** → these are the **shunt/NC contacts**
+- Spin the dial: Find contacts that **pulse open/closed** → these are the **pulse contacts**
+
+**3-Wire Rotary Dial** (Most Common)
+Three terminals:
+1. **Common/Ground** - Shared return for both switches
+2. **Pulse Switch** - Opens/closes 1-10 times per digit
+3. **Shunt/NC Switch** - Normally closed, opens while dialing
+
+Wiring to ESP32:
+```
+Common/Ground → GND
+Pulse Switch  → GPIO 15 (ROTARY_PULSE with internal pull-up enabled)
+Shunt/NC      → GPIO 14 (ROTARY_ACTIVE with internal pull-up enabled)
+```
+
+**4-Wire Rotary Dial**
+Four terminals (two isolated switch pairs):
+1. **Pulse Contact A** - One side of pulse switch
+2. **Pulse Contact B** - Other side of pulse switch
+3. **Shunt Contact A** - One side of shunt switch
+4. **Shunt Contact B** - Other side of shunt switch
+
+Wiring to ESP32:
+```
+Pulse Contact A → GPIO 15 (ROTARY_PULSE with internal pull-up enabled)
+Pulse Contact B → GND
+Shunt Contact A → GPIO 14 (ROTARY_ACTIVE with internal pull-up enabled)
+Shunt Contact B → GND
+```
+
+**How it works:**
+- **ROTARY_PULSE (GPIO 15)**: Counts pulses as dial returns to rest
+  - With pull-up enabled: normally HIGH, goes LOW on each pulse
+  - Each digit generates 1-10 pulses (digit "1" = 1 pulse, "0" = 10 pulses)
+  
+- **ROTARY_ACTIVE (GPIO 14)**: Detects when dial is being turned
+  - With pull-up enabled: normally HIGH (shunt closed to GND)
+  - Goes HIGH when you start turning the dial (shunt opens)
+  - Returns to HIGH when dial returns to rest
+  - Prevents false hook switch triggers during dialing
+
+**Testing your dial:**
+1. Connect pulse switch as shown above
+2. Enable internal pull-up on GPIO 15
+3. Monitor GPIO 15 with Serial.println()
+4. Dial "1" → should see 1 pulse (LOW transition)
+5. Dial "5" → should see 5 pulses
+6. Dial "0" → should see 10 pulses
+
+**Note:** The ESP32 code uses internal pull-up resistors, so **no external resistors needed**. Both GPIO 14 and 15 are configured with `INPUT_PULLUP` in the firmware.
 
 Speaker wiring cautions
 - MAX98357A outputs are bridged (BTL). Do not connect SPK+ or SPK− to ground
