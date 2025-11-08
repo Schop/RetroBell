@@ -248,11 +248,13 @@ void playDialTone() {
  * Output: RIGHT channel (handset)
  */
 void playRingbackTone() {
-  currentTone = TONE_RINGBACK;
-  toneStartTime = millis();
-  lastCadenceTime = millis();
-  cadenceOn = true;
-  Serial.println("Playing ringback tone");
+  if (currentTone != TONE_RINGBACK) {
+    currentTone = TONE_RINGBACK;
+    toneStartTime = millis();
+    lastCadenceTime = millis();
+    cadenceOn = true;
+    Serial.println("Playing ringback tone");
+  }
 }
 
 /*
@@ -262,11 +264,13 @@ void playRingbackTone() {
  * Output: LEFT channel (base ringer)
  */
 void playRingTone() {
-  currentTone = TONE_RING;
-  toneStartTime = millis();
-  lastCadenceTime = millis();
-  cadenceOn = true;
-  Serial.println("Playing ring tone");
+  if (currentTone != TONE_RING) {
+    currentTone = TONE_RING;
+    toneStartTime = millis();
+    lastCadenceTime = millis();
+    cadenceOn = true;
+    Serial.println("Playing ring tone");
+  }
 }
 
 /*
@@ -279,11 +283,13 @@ void playRingTone() {
  * indicating the call cannot be completed (number not found, network error, etc.)
  */
 void playErrorTone() {
-  currentTone = TONE_ERROR;
-  toneStartTime = millis();
-  lastCadenceTime = millis();
-  cadenceOn = true;
-  Serial.println("Playing error tone (fast busy)");
+  if (currentTone != TONE_ERROR) {
+    currentTone = TONE_ERROR;
+    toneStartTime = millis();
+    lastCadenceTime = millis();
+    cadenceOn = true;
+    Serial.println("Playing error tone (fast busy)");
+  }
 }
 
 /*
@@ -296,11 +302,13 @@ void playErrorTone() {
  * is currently in use (off-hook or already in another call).
  */
 void playBusyTone() {
-  currentTone = TONE_BUSY;
-  toneStartTime = millis();
-  lastCadenceTime = millis();
-  cadenceOn = true;
-  Serial.println("Playing busy tone");
+  if (currentTone != TONE_BUSY) {
+    currentTone = TONE_BUSY;
+    toneStartTime = millis();
+    lastCadenceTime = millis();
+    cadenceOn = true;
+    Serial.println("Playing busy tone");
+  }
 }
 
 /*
