@@ -1,43 +1,50 @@
 /*
  * Rotary Dial - Pulse Counting and Digit Recognition
  * 
- * Decodes the mechanical rotary dial into digits.
+ * Reliable rotary dial decoding using proven methods from testing.
  * 
- * How Rotary Dials Work:
- * - User rotates dial to desired number and releases
- * - ROTARY_ACTIVE goes LOW when dial is rotating, HIGH when at rest
- * - ROTARY_PULSE generates pulses (LOW pulses) as dial returns to rest
- * - Number of pulses = digit dialed (1 pulse = 1, 10 pulses = 0)
+ * How This Implementation Works:
+ * - Uses interrupt-driven pulse detection for reliability
+ * - Counts pulses on HIGH transitions (proven most reliable)
+ * - Uses shunt switch for immediate completion detection
+ * - Proper debouncing: 20ms pulse, 50ms shunt
+ * 
+ * Hardware:
+ * - ROTARY_PULSE: Pulse switch (counts dial pulses)
+ * - ROTARY_ACTIVE: Shunt/off-normal switch (detects dialing state)
  * 
  * Timing:
- * - Pulse debounce: 10ms (ignore bounces shorter than this)
- * - Digit timeout: 150ms (digit complete 150ms after last pulse)
+ * - Pulse debounce: 20ms (proven reliable)
+ * - Shunt debounce: 50ms (prevents bounce issues)
+ * - Safety timeout: 3 seconds (backup if shunt fails)
  * 
  * Example: Dialing "5"
  * 1. User rotates dial to 5 and releases
  * 2. ROTARY_ACTIVE goes LOW (dialing starts)
- * 3. Dial returns, generating 5 pulses on ROTARY_PULSE
- * 4. ROTARY_ACTIVE goes HIGH (dialing ends)
- * 5. After 150ms, digit "5" is ready
+ * 3. Dial returns, generating 5 HIGH transitions on ROTARY_PULSE
+ * 4. ROTARY_ACTIVE goes HIGH (dialing ends) → digit immediately ready
+ * 5. Digit "5" is available instantly
  */
 
 #include "RotaryDial.h"
 #include "Pins.h"
 #include <Arduino.h>
 
-// Single digit state (low-level)
+// Single digit state (interrupt-driven, proven reliable)
 volatile int pulseCount = 0;
 volatile bool isDialing = false;
 volatile bool digitReady = false;
+volatile unsigned long dialingTimeout = 0;
 int lastDialedDigit = -1;
 
-// Debouncing and timing
-int lastPulseState = HIGH;
-int lastActiveState = HIGH;
-unsigned long lastPulseTime = 0;
-unsigned long dialStartTime = 0;
-const unsigned long PULSE_DEBOUNCE = 10; // 10ms debounce for pulse pin
-const unsigned long DIGIT_TIMEOUT = 150; // 150ms after last pulse to consider digit complete
+// State tracking for interrupts
+volatile bool lastDialState = HIGH;
+volatile bool lastPulseState = HIGH;
+
+// Proven timing constants from testing
+const unsigned long PULSE_DEBOUNCE_MS = 20;    // Pulse switch debounce
+const unsigned long DIAL_DEBOUNCE_MS = 50;     // Shunt switch debounce
+const unsigned long SAFETY_TIMEOUT_MS = 3000;  // Safety backup timeout
 
 // Multi-digit collection state (high-level)
 String collectedNumber = "";           // Complete phone number being dialed
@@ -46,77 +53,96 @@ bool isCollectingNumber = false;
 const unsigned long DIAL_COMPLETE_TIMEOUT = 3000; // 3 seconds after last digit = complete
 const int MAX_DIGITS = 3;                         // Maximum digits in a phone number
 
-/*
- * Setup Rotary Dial
- * Configure both rotary dial pins with internal pull-up resistors
- */
-void setupRotaryDial() {
-    pinMode(ROTARY_PULSE_PIN, INPUT_PULLUP);
-    pinMode(ROTARY_ACTIVE_PIN, INPUT_PULLUP);
-}
-
-/*
- * Handle Rotary Dial
- * 
- * Called continuously from main loop to monitor dial state and count pulses.
- * 
- * Process:
- * 1. Detect dial start (ROTARY_ACTIVE goes LOW)
- * 2. Count falling edges on ROTARY_PULSE while dialing
- * 3. Detect dial end (ROTARY_ACTIVE goes HIGH)
- * 4. After 150ms timeout, convert pulse count to digit
- * 
- * Special Cases:
- * - 10 pulses = digit 0 (zero is at the end of the dial)
- * - Pulses are debounced with 10ms minimum spacing
- */
-void handleRotaryDial() {
-    int activeState = digitalRead(ROTARY_ACTIVE_PIN);
-    int pulseState = digitalRead(ROTARY_PULSE_PIN);
+// Interrupt handlers for proven reliable detection
+void IRAM_ATTR onPulseInterrupt() {
+    static unsigned long lastPulseTime = 0;
     unsigned long currentTime = millis();
-
-    // Detect when dialing starts (ROTARY_ACTIVE goes LOW)
-    if (activeState == LOW && lastActiveState == HIGH) {
-        isDialing = true;
-        pulseCount = 0;
-        digitReady = false;
-        dialStartTime = currentTime;
-        Serial.println("Dial started");
-    }
-
-    // Detect when dialing ends (ROTARY_ACTIVE goes HIGH)
-    if (activeState == HIGH && lastActiveState == LOW) {
-        isDialing = false;
-        Serial.print("Dial ended. Pulse count: ");
-        Serial.println(pulseCount);
-    }
-
-    // Count pulses while dialing
-    if (isDialing) {
-        // Detect falling edge on pulse pin (pulse start)
-        if (pulseState == LOW && lastPulseState == HIGH) {
-            if (currentTime - lastPulseTime > PULSE_DEBOUNCE) {
+    
+    bool currentPulseState = digitalRead(ROTARY_PULSE_PIN);
+    
+    // Count on HIGH transitions (proven most reliable)
+    if (currentPulseState == HIGH && lastPulseState == LOW) {
+        if (currentTime - lastPulseTime > PULSE_DEBOUNCE_MS) {
+            if (isDialing) {
                 pulseCount++;
                 lastPulseTime = currentTime;
             }
         }
     }
+    lastPulseState = currentPulseState;
+}
 
-    // Check if digit is complete (dial has stopped and enough time has passed)
-    if (!isDialing && pulseCount > 0 && !digitReady) {
-        if (currentTime - lastPulseTime > DIGIT_TIMEOUT) {
-            // Convert pulse count to digit (0 = 10 pulses)
-            lastDialedDigit = (pulseCount == 10) ? 0 : pulseCount;
-            digitReady = true;
+void IRAM_ATTR onDialInterrupt() {
+    static unsigned long lastDialTime = 0;
+    unsigned long currentTime = millis();
+    
+    bool currentDialState = digitalRead(ROTARY_ACTIVE_PIN);
+    
+    if (currentTime - lastDialTime > DIAL_DEBOUNCE_MS) {
+        if (currentDialState == LOW && lastDialState == HIGH) {
+            // Dialing started
+            isDialing = true;
             pulseCount = 0;
-            
-            Serial.print("Digit dialed: ");
+            digitReady = false;
+            dialingTimeout = currentTime + SAFETY_TIMEOUT_MS;
+        }
+        else if (currentDialState == HIGH && lastDialState == LOW) {
+            // Dialing ended - digit immediately ready
+            if (isDialing && pulseCount > 0) {
+                isDialing = false;
+                digitReady = true;
+                // Convert pulse count to digit (0 = 10 pulses)
+                lastDialedDigit = (pulseCount == 10) ? 0 : pulseCount;
+            }
+        }
+        lastDialTime = currentTime;
+    }
+    lastDialState = currentDialState;
+}
+
+/*
+ * Setup Rotary Dial
+ * Configure pins and attach interrupts for reliable detection
+ */
+void setupRotaryDial() {
+    pinMode(ROTARY_PULSE_PIN, INPUT_PULLUP);
+    pinMode(ROTARY_ACTIVE_PIN, INPUT_PULLUP);
+    
+    // Initialize states
+    lastPulseState = digitalRead(ROTARY_PULSE_PIN);
+    lastDialState = digitalRead(ROTARY_ACTIVE_PIN);
+    
+    // Attach interrupts for real-time detection
+    attachInterrupt(digitalPinToInterrupt(ROTARY_PULSE_PIN), onPulseInterrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ROTARY_ACTIVE_PIN), onDialInterrupt, CHANGE);
+}
+
+/*
+ * Handle Rotary Dial
+ * 
+ * Called continuously from main loop. With interrupt-driven detection,
+ * this function only needs to handle safety timeout checks.
+ * 
+ * The actual pulse counting and digit completion is handled by interrupts
+ * for maximum reliability and real-time response.
+ */
+void handleRotaryDial() {
+    unsigned long currentTime = millis();
+    
+    // Safety timeout check - if we've been dialing too long, force completion
+    if (isDialing && currentTime > dialingTimeout) {
+        if (pulseCount > 0) {
+            isDialing = false;
+            digitReady = true;
+            lastDialedDigit = (pulseCount == 10) ? 0 : pulseCount;
+            Serial.print("Safety timeout - Digit: ");
             Serial.println(lastDialedDigit);
+        } else {
+            // Reset if no pulses detected
+            isDialing = false;
+            pulseCount = 0;
         }
     }
-
-    lastPulseState = pulseState;
-    lastActiveState = activeState;
 }
 
 /*
