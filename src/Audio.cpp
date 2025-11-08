@@ -234,9 +234,11 @@ void writeAudioBuffer(const int16_t* buffer, size_t samples) {
  * Standard North American dial tone
  */
 void playDialTone() {
-  currentTone = TONE_DIAL;
-  toneStartTime = millis();
-  Serial.println("Playing dial tone");
+  if (currentTone != TONE_DIAL) {
+    currentTone = TONE_DIAL;
+    toneStartTime = millis();
+    Serial.println("Playing dial tone");
+  }
 }
 
 /*
@@ -306,9 +308,11 @@ void playBusyTone() {
  * Clears audio buffers and stops tone generation
  */
 void stopTone() {
-  currentTone = TONE_NONE;
-  i2s_zero_dma_buffer(I2S_PORT); // Clear the buffer to stop audio
-  Serial.println("Tone stopped");
+  if (currentTone != TONE_NONE) {
+    currentTone = TONE_NONE;
+    i2s_zero_dma_buffer(I2S_PORT); // Clear the buffer to stop audio
+    Serial.println("Tone stopped");
+  }
 }
 
 /*

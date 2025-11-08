@@ -35,6 +35,7 @@ volatile int pulseCount = 0;
 volatile bool isDialing = false;
 volatile bool digitReady = false;
 volatile unsigned long dialingTimeout = 0;
+volatile unsigned long lastPulseTime = 0;
 int lastDialedDigit = -1;
 
 // State tracking for interrupts
@@ -55,49 +56,65 @@ const int MAX_DIGITS = 3;                         // Maximum digits in a phone n
 
 // Interrupt handlers for proven reliable detection
 void IRAM_ATTR onPulseInterrupt() {
-    static unsigned long lastPulseTime = 0;
-    unsigned long currentTime = millis();
+    unsigned long now = millis();
+    
+    // Debounce
+    static unsigned long lastPulseDebounce = 0;
+    if (now - lastPulseDebounce < PULSE_DEBOUNCE_MS) {
+        return;
+    }
     
     bool currentPulseState = digitalRead(ROTARY_PULSE_PIN);
-    
-    // Count on HIGH transitions (proven most reliable)
-    if (currentPulseState == HIGH && lastPulseState == LOW) {
-        if (currentTime - lastPulseTime > PULSE_DEBOUNCE_MS) {
-            if (isDialing) {
-                pulseCount++;
-                lastPulseTime = currentTime;
-            }
+    if (currentPulseState != lastPulseState) {
+        lastPulseDebounce = now;
+        
+        // Count on HIGH transitions (like working Arduino sketch)
+        if (isDialing && currentPulseState == HIGH) {
+            pulseCount++;
+            lastPulseTime = now;
+            dialingTimeout = now;  // Reset timeout on each pulse
         }
+        
+        lastPulseState = currentPulseState;
     }
-    lastPulseState = currentPulseState;
 }
 
 void IRAM_ATTR onDialInterrupt() {
-    static unsigned long lastDialTime = 0;
-    unsigned long currentTime = millis();
+    unsigned long now = millis();
+    
+    // Debounce
+    static unsigned long lastDialDebounce = 0;
+    if (now - lastDialDebounce < DIAL_DEBOUNCE_MS) {
+        return;
+    }
     
     bool currentDialState = digitalRead(ROTARY_ACTIVE_PIN);
-    
-    if (currentTime - lastDialTime > DIAL_DEBOUNCE_MS) {
-        if (currentDialState == LOW && lastDialState == HIGH) {
-            // Dialing started
+    if (currentDialState != lastDialState) {
+        lastDialDebounce = now;
+        
+        // Start dialing when shunt goes LOW
+        if (!isDialing && currentDialState == LOW) {
             isDialing = true;
             pulseCount = 0;
             digitReady = false;
-            dialingTimeout = currentTime + SAFETY_TIMEOUT_MS;
+            dialingTimeout = now;
+            // Remove Serial.println from ISR - causes watchdog timeout
         }
-        else if (currentDialState == HIGH && lastDialState == LOW) {
-            // Dialing ended - digit immediately ready
-            if (isDialing && pulseCount > 0) {
-                isDialing = false;
+        // End dialing when shunt goes HIGH (dial returned to rest)
+        else if (isDialing && currentDialState == HIGH) {
+            isDialing = false;
+            
+            // Process the digit immediately when dial returns to rest
+            if (pulseCount > 0) {
                 digitReady = true;
-                // Convert pulse count to digit (0 = 10 pulses)
+                // Convert pulse count to digit (10 pulses = 0)
                 lastDialedDigit = (pulseCount == 10) ? 0 : pulseCount;
+                // Remove Serial.println from ISR - causes watchdog timeout
             }
         }
-        lastDialTime = currentTime;
+        
+        lastDialState = currentDialState;
     }
-    lastDialState = currentDialState;
 }
 
 /*
@@ -115,32 +132,85 @@ void setupRotaryDial() {
     // Attach interrupts for real-time detection
     attachInterrupt(digitalPinToInterrupt(ROTARY_PULSE_PIN), onPulseInterrupt, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ROTARY_ACTIVE_PIN), onDialInterrupt, CHANGE);
+    
+    // Show initial switch states for debugging
+    Serial.println("Initial rotary dial switch states:");
+    Serial.print("  Pulse switch (GPIO 15): ");
+    Serial.println(digitalRead(ROTARY_PULSE_PIN) ? "HIGH" : "LOW");
+    Serial.print("  Shunt switch (GPIO 14): ");
+    Serial.println(digitalRead(ROTARY_ACTIVE_PIN) ? "HIGH" : "LOW");
 }
 
 /*
  * Handle Rotary Dial
  * 
  * Called continuously from main loop. With interrupt-driven detection,
- * this function only needs to handle safety timeout checks.
+ * this function provides visual feedback and safety timeout.
  * 
  * The actual pulse counting and digit completion is handled by interrupts
  * for maximum reliability and real-time response.
  */
 void handleRotaryDial() {
-    unsigned long currentTime = millis();
+    unsigned long now = millis();
+    
+    // Handle dial state messages (moved from ISR to avoid watchdog timeout)
+    static bool lastReportedDialing = false;
+    static bool lastReportedDigitReady = false;
+    
+    if (isDialing && !lastReportedDialing) {
+        Serial.println("[Dial started turning]");
+        lastReportedDialing = true;
+    }
+    
+    if (!isDialing && lastReportedDialing) {
+        Serial.println("[Dial returned to rest]");
+        lastReportedDialing = false;
+    }
+    
+    if (digitReady && !lastReportedDigitReady) {
+        Serial.print("✓ Digit dialed: ");
+        Serial.print(lastDialedDigit);
+        Serial.print(" (");
+        Serial.print(pulseCount);
+        Serial.println(" pulses)");
+        lastReportedDigitReady = true;
+    }
+    
+    if (!digitReady) {
+        lastReportedDigitReady = false;
+    }
+    
+    // Handle pulse display (show dots for visual feedback)
+    static int lastDisplayedCount = 0;
+    if (isDialing && pulseCount > lastDisplayedCount) {
+        Serial.print(".");
+        Serial.print("[");
+        Serial.print(pulseCount);
+        Serial.print("]");
+        lastDisplayedCount = pulseCount;
+    }
+    
+    // Reset display counter when not dialing
+    if (!isDialing) {
+        lastDisplayedCount = 0;
+    }
     
     // Safety timeout check - if we've been dialing too long, force completion
-    if (isDialing && currentTime > dialingTimeout) {
+    if (isDialing && (now - dialingTimeout) > (SAFETY_TIMEOUT_MS * 2)) {
+        // Safety timeout reached - something went wrong
+        isDialing = false;
+        
+        Serial.println("\n[Safety timeout - dial may be stuck]");
+        
         if (pulseCount > 0) {
-            isDialing = false;
             digitReady = true;
             lastDialedDigit = (pulseCount == 10) ? 0 : pulseCount;
-            Serial.print("Safety timeout - Digit: ");
-            Serial.println(lastDialedDigit);
-        } else {
-            // Reset if no pulses detected
-            isDialing = false;
-            pulseCount = 0;
+            
+            Serial.print("✓ Digit dialed: ");
+            Serial.print(lastDialedDigit);
+            Serial.print(" (");
+            Serial.print(pulseCount);
+            Serial.println(" pulses)");
         }
     }
 }
