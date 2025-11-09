@@ -19,14 +19,14 @@
 
 // ====== I2S Audio Output ======
 // Standard I2S interface for stereo audio output
-#define I2S_BCLK_PIN 26    // Bit Clock (BCLK) - timing for bits
-#define I2S_LRCLK_PIN 25   // Left/Right Clock (WS) - timing for channels
-#define I2S_DOUT_PIN 22    // Data Output (DOUT) - actual audio data
+#define I2S_BCLK_PIN 8     // Bit Clock (BCLK) - timing for bits (was 26)
+#define I2S_LRCLK_PIN 9    // Left/Right Clock (WS) - timing for channels (was 25)
+#define I2S_DOUT_PIN 10    // Data Output (DOUT) - actual audio data (was 22)
 
 // ====== Amplifier Control (MAX98357A) ======
 // SD pins control shutdown/enable and channel latching
-#define AMP_HANDSET_SD_PIN 33  // Handset amplifier shutdown (HIGH=enabled, LOW=muted)
-#define AMP_RINGER_SD_PIN 32   // Ringer amplifier shutdown (HIGH=enabled, LOW=muted)
+#define AMP_HANDSET_SD_PIN 11  // Handset amplifier shutdown (HIGH=enabled, LOW=muted) (was 33)
+#define AMP_RINGER_SD_PIN 12   // Ringer amplifier shutdown (HIGH=enabled, LOW=muted) (was 32)
 
 // ====== Microphone Input ======
 // ADC input for reading microphone level

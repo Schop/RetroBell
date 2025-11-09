@@ -125,11 +125,32 @@ void loop() {
 
   // ====== Main State Machine ======
   // Each state handles different phone behaviors
-  switch (getCurrentState()) {
+  static PhoneState lastState = IDLE; // Track state changes
+  PhoneState currentStateValue = getCurrentState();
+  
+  // Handle state entry actions (only run once when entering a state)
+  if (currentStateValue != lastState) {
+    switch (currentStateValue) {
+      case IDLE:
+        // Just entered IDLE state - reset dialing system once
+        resetDialedNumber();
+        stopTone();
+        break;
+      case OFF_HOOK:
+        // Just entered OFF_HOOK state
+        startDialing();
+        break;
+      default:
+        break;
+    }
+    lastState = currentStateValue;
+  }
+  
+  // Handle continuous state actions (run every loop while in state)
+  switch (currentStateValue) {
     case IDLE:
       // Waiting for handset to be lifted or for an incoming call
-      resetDialedNumber(); // Ensure dialing system is reset
-      stopTone();          // Ensure no tones are playing
+      // (resetDialedNumber and stopTone moved to state entry above)
       break;
       
     case OFF_HOOK:

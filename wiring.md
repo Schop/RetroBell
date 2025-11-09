@@ -5,12 +5,12 @@ Per phone: connections at a glance
   - 3V3 → powers MAX9814 VCC
   - GND → common to all modules
   - I2S0 TX (stereo out to both amps)
-    - BCLK: GPIO 26 → both MAX98357A BCLK
-    - LRCLK/WS: GPIO 25 → both MAX98357A LRCLK
-    - DATA_OUT: GPIO 22 → both MAX98357A DIN
+    - BCLK: GPIO 8 → both MAX98357A BCLK
+    - LRCLK/WS: GPIO 9 → both MAX98357A LRCLK
+    - DATA_OUT: GPIO 10 → both MAX98357A DIN
   - Amp enables (to latch channels and allow mute)
-    - Handset amp SD: GPIO 33
-    - Base (ringer) amp SD: GPIO 32
+    - Handset amp SD: GPIO 11
+    - Base (ringer) amp SD: GPIO 12
   - Mic input (from MAX9814 OUT)
     - MIC_ADC: GPIO 4 (ADC input on S3)
       - If using classic ESP32 (WROOM-32), use GPIO 34 (ADC1) to avoid Wi‑Fi conflicts
@@ -27,20 +27,20 @@ Per phone: connections at a glance
 - MAX98357A (handset amp)
   - VIN → 5V (from ESP32 VBUS)
   - GND → GND
-  - BCLK → GPIO 26
-  - LRCLK/WS → GPIO 25
-  - DIN → GPIO 22
-  - SD → GPIO 33
+  - BCLK → GPIO 8
+  - LRCLK/WS → GPIO 9
+  - DIN → GPIO 10
+  - SD → GPIO 11
   - SPK+ / SPK− → handset speaker (two wires through handset cord)
   - Note: This amp will be latched to one stereo channel (see boot sequence)
 
 - MAX98357A (base ringer amp)
   - VIN → 5V (from ESP32 VBUS)
   - GND → GND
-  - BCLK → GPIO 26
-  - LRCLK/WS → GPIO 25
-  - DIN → GPIO 22
-  - SD → GPIO 32
+  - BCLK → GPIO 8
+  - LRCLK/WS → GPIO 9
+  - DIN → GPIO 10
+  - SD → GPIO 12
   - SPK+ / SPK− → base speaker mounted in the phone base
 
 - MAX9814 mic preamp (in base)
@@ -65,11 +65,11 @@ Power distribution and decoupling
 Channel assignment (left = base ring, right = handset audio)
 - Both amps share the same I2S lines; you assign channels by how you enable them at boot:
   1) Hold both SD pins LOW (both amps off)
-  2) Temporarily drive LRCLK (GPIO 25) as a plain GPIO LOW
-  3) Set Handset SD (GPIO 33) HIGH → handset amp latches LEFT
-  4) Drive LRCLK (GPIO 25) HIGH
-  5) Set Base SD (GPIO 32) HIGH → base amp latches RIGHT
-  6) Hand GPIO 25 back to the I2S peripheral and start I2S TX
+  2) Temporarily drive LRCLK (GPIO 9) as a plain GPIO LOW
+  3) Set Handset SD (GPIO 11) HIGH → handset amp latches LEFT
+  4) Drive LRCLK (GPIO 9) HIGH
+  5) Set Base SD (GPIO 12) HIGH → base amp latches RIGHT
+  6) Hand GPIO 9 back to the I2S peripheral and start I2S TX
 - In your playback:
   - Send base ring tone on the LEFT channel only (base amp hears it)
   - Send dial tone, ringback, and far‑end audio on the RIGHT channel only (handset amp hears it)
