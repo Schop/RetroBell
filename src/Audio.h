@@ -21,4 +21,8 @@ void updateToneGeneration(); // Call this in loop() to keep tones playing
 bool readMicrophoneBuffer(int16_t* buffer, size_t samples);
 void writeAudioBuffer(const int16_t* buffer, size_t samples);
 
+// Test mode functions
+void generateTestTone(int16_t* buffer, size_t samples, float frequency, bool leftChannel, bool rightChannel);
+void writeRawAudioBuffer(const int16_t* buffer, size_t samples);
+
 #endif // AUDIO_H

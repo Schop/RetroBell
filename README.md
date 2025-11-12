@@ -169,7 +169,7 @@ See `Pins.h` for complete pin definitions:
 3. Hear ringback tone
 4. Peer's phone rings
 5. Peer lifts handset → both phones go IN_CALL
-6. Talk! (audio streaming not yet implemented)
+6. Talk!
 7. Hang up to end call
 
 ## 🛠️ Building & Uploading

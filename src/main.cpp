@@ -22,6 +22,7 @@
 #include "Network.h"
 #include "Configuration.h"
 #include "WebInterface.h"
+#include "TestMode.h"
 #include <Arduino.h>
 
 // Configuration
@@ -68,6 +69,7 @@ void setup() {
   printMacAddress();   // Display MAC address for debugging
   setupNetwork();      // Initialize ESP-NOW and start discovery
   setupWebInterface(); // Start web server for debug interface
+  setupTestMode();     // Initialize test mode system
 
   Serial.println("\n=================================");
   Serial.print("Phone #");
@@ -87,6 +89,14 @@ void setup() {
  * 4. Manages state transitions (IDLE -> OFF_HOOK -> DIALING -> CALLING -> IN_CALL)
  */
 void loop() {
+  // Handle test mode first (takes priority over normal operation)
+  handleTestMode();
+  
+  // Skip normal phone operations if in test mode
+  if (isTestModeActive()) {
+    return;
+  }
+  
   // Poll hardware inputs
   handleHookSwitch();              // Check if handset is lifted/replaced
   handleRotaryDial();              // Check for rotary dial pulses

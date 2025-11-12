@@ -450,3 +450,50 @@ void updateToneGeneration() {
       break;
   }
 }
+
+/*
+ * Write Raw Audio Buffer
+ * 
+ * Directly writes audio samples to I2S output without channel conversion.
+ * Used by test mode for precise control of stereo channels.
+ * 
+ * Parameters:
+ * - buffer: Stereo interleaved samples (LEFT, RIGHT, LEFT, RIGHT...)
+ * - samples: Total number of samples (must be even for stereo)
+ */
+void writeRawAudioBuffer(const int16_t* buffer, size_t samples) {
+  if (!buffer) return;
+  
+  size_t bytes_written;
+  i2s_write(I2S_PORT, buffer, samples * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+}
+
+/*
+ * Generate Test Tone
+ * 
+ * Creates a test tone for hardware validation with precise channel control.
+ * Used by test mode to verify individual speaker channels.
+ * 
+ * Parameters:
+ * - buffer: Output buffer for stereo samples
+ * - samples: Number of samples to generate (must be even)
+ * - frequency: Tone frequency in Hz
+ * - leftChannel: Output on LEFT channel (ringer)
+ * - rightChannel: Output on RIGHT channel (handset)
+ */
+void generateTestTone(int16_t* buffer, size_t samples, float frequency, bool leftChannel, bool rightChannel) {
+  static float phase = 0.0;
+  float phaseIncrement = (2.0 * PI * frequency) / SAMPLE_RATE;
+  
+  for (size_t i = 0; i < samples; i += 2) {
+    int16_t sample = (int16_t)(sin(phase) * 8000); // Test tone at 50% volume
+    phase += phaseIncrement;
+    if (phase >= 2.0 * PI) {
+      phase -= 2.0 * PI;
+    }
+    
+    // Stereo: left channel first, then right channel
+    buffer[i] = leftChannel ? sample : 0;
+    buffer[i + 1] = rightChannel ? sample : 0;
+  }
+}
