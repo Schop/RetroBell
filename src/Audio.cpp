@@ -29,13 +29,19 @@ enum ToneType {
   TONE_RINGBACK,
   TONE_RING,
   TONE_ERROR,  // Fast busy tone for errors (250ms cadence)
-  TONE_BUSY    // Normal busy tone (500ms cadence)
+  TONE_BUSY,   // Normal busy tone (500ms cadence)
+  TONE_TEST_RECORDED  // Test mode recorded audio playback
 };
 
 ToneType currentTone = TONE_NONE;
 unsigned long toneStartTime = 0;
 unsigned long lastCadenceTime = 0;
 bool cadenceOn = false;
+
+// Test mode recorded audio playback
+extern int16_t* testRecordedBuffer;
+extern int testRecordedSamples;
+static int recordedPlaybackIndex = 0;
 
 /*
  * Generate Sine Wave Tone
@@ -187,13 +193,30 @@ void setupMicrophone() {
 bool readMicrophoneBuffer(int16_t* buffer, size_t samples) {
   if (!buffer) return false;
   
+  static int32_t dcOffset = 2048;  // Running average for DC removal
+  static bool dcCalibrated = false;
+  
   for (size_t i = 0; i < samples; i++) {
-    // Read 12-bit ADC value (0-4095)
+    // Read 12-bit ADC value (0-4095)  
     int adcValue = adc1_get_raw(ADC1_CHANNEL_3);  // GPIO 4
     
-    // Convert to signed 16-bit audio (-32768 to +32767)
-    // Center around 0 and scale up
-    buffer[i] = (int16_t)((adcValue - 2048) * 16);  // 2048 is midpoint of 0-4095
+    // Update DC offset (slow adaptation for DC removal)
+    if (!dcCalibrated) {
+      dcOffset = adcValue;  // Quick initial calibration
+      dcCalibrated = true;
+    } else {
+      dcOffset = (dcOffset * 1023 + adcValue) / 1024;  // Very slow adaptation
+    }
+    
+    // Remove DC component and scale to 16-bit audio
+    int32_t acSignal = adcValue - dcOffset;
+    
+    // Amplify and convert to signed 16-bit (with clipping protection)
+    int32_t amplified = acSignal * 128;  // Higher amplification for better signal
+    if (amplified > 32767) amplified = 32767;
+    if (amplified < -32768) amplified = -32768;
+    
+    buffer[i] = (int16_t)amplified;
   }
   
   return true;
@@ -254,6 +277,22 @@ void playRingbackTone() {
     lastCadenceTime = millis();
     cadenceOn = true;
     Serial.println("Playing ringback tone");
+  }
+}
+
+/*
+ * Play Test Recorded Audio
+ * Plays back recorded microphone audio from test mode
+ */
+void playTestRecordedAudio() {
+  if (currentTone != TONE_TEST_RECORDED) {
+    currentTone = TONE_TEST_RECORDED;
+    toneStartTime = millis();
+    recordedPlaybackIndex = 0;
+    Serial.print("Playing recorded audio - samples: ");
+    Serial.print(testRecordedSamples);
+    Serial.print(", buffer: 0x");
+    Serial.println((unsigned long)testRecordedBuffer, HEX);
   }
 }
 
@@ -441,6 +480,71 @@ void updateToneGeneration() {
         }
       } else {
         memset(buffer, 0, BUFFER_SIZE * sizeof(int16_t)); // Silence
+      }
+      i2s_write(I2S_PORT, buffer, BUFFER_SIZE * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+      break;
+      
+    case TONE_TEST_RECORDED:
+      // Recorded audio playback - plays for exactly the length of the recording, then stops
+      if (testRecordedBuffer && testRecordedSamples > 0) {
+        // Debug: Show progress every 1000 samples
+        static int lastDebugIndex = -1000;
+        if (recordedPlaybackIndex - lastDebugIndex >= 1000) {
+          Serial.print("Playback progress: ");
+          Serial.print(recordedPlaybackIndex);
+          Serial.print("/");
+          Serial.println(testRecordedSamples);
+          lastDebugIndex = recordedPlaybackIndex;
+        }
+        
+        // Fill buffer with recorded samples
+        // Since we recorded at ~500Hz but play at 16kHz, repeat each sample 32 times
+        static int sampleRepeatCount = 0;
+        static int16_t currentSample = 0;
+        static int16_t previousSample = 0;
+        const int REPEAT_FACTOR = 32; // 16000Hz / 500Hz = 32
+        
+        for (size_t i = 0; i < BUFFER_SIZE; i += 2) {
+          // Get new sample if we've repeated the current one enough times
+          if (sampleRepeatCount == 0) {
+            if (recordedPlaybackIndex < testRecordedSamples) {
+              int16_t rawSample = testRecordedBuffer[recordedPlaybackIndex];
+              
+              // Light smoothing filter - less aggressive than before
+              currentSample = (rawSample * 3 + previousSample) / 4;
+              
+              // Moderate amplitude limiting - allow louder signals
+              if (currentSample > 8000) currentSample = 8000;
+              if (currentSample < -8000) currentSample = -8000;
+              
+              previousSample = rawSample;
+              
+              recordedPlaybackIndex++;
+            } else {
+              currentSample = 0; // Silence when done
+            }
+          }
+          
+          // Output on LEFT channel (ringer) - we know this works
+          buffer[i] = currentSample;   // Left channel
+          buffer[i + 1] = 0;          // Right channel (silent)
+          
+          // Track repeat count
+          sampleRepeatCount++;
+          if (sampleRepeatCount >= REPEAT_FACTOR) {
+            sampleRepeatCount = 0;
+          }
+        }
+        
+        // Stop when we've played all samples
+        if (recordedPlaybackIndex >= testRecordedSamples && sampleRepeatCount == 0) {
+          currentTone = TONE_NONE;
+          Serial.println("Recorded audio playback complete - all samples played");
+        }
+      } else {
+        // No recorded data available
+        memset(buffer, 0, BUFFER_SIZE * sizeof(int16_t));
+        Serial.println("ERROR: No recorded data available for playback!");
       }
       i2s_write(I2S_PORT, buffer, BUFFER_SIZE * sizeof(int16_t), &bytes_written, portMAX_DELAY);
       break;

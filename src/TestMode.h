@@ -43,12 +43,19 @@ void handleAudioTest();
 void testHandsetAudio();
 void testRingerAudio();
 void testBothAudio();
+void testDialTone();
 void stopAudioTest();
 
 // Microphone test functions
 void testMicrophoneLevel();
 void testMicrophoneRecord();
+void testMicrophoneTone();
 void stopMicrophoneTest();
+void testWAVPlayback();
+void testMP3Playback();
+
+// Debug test functions
+void testSineWave();
 
 // Diagnostic functions
 void testPinStates();
