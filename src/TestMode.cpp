@@ -667,22 +667,43 @@ void testPinStates() {
   Serial.println();
   Serial.println("========== GPIO PIN STATES ==========");
   
-  // Audio pins
-  Serial.println("I2S Audio Pins:");
+  // Audio pins - Dual I2S System
+  Serial.println("I2S0 Audio Pins (Handset):");
   Serial.print("  BCLK (GPIO ");
-  Serial.print(I2S_BCLK_PIN);
+  Serial.print(I2S0_BCLK_PIN);
   Serial.print("): ");
-  Serial.println(digitalRead(I2S_BCLK_PIN) ? "HIGH" : "LOW");
+  Serial.println(digitalRead(I2S0_BCLK_PIN) ? "HIGH" : "LOW");
   
   Serial.print("  LRCLK (GPIO ");
-  Serial.print(I2S_LRCLK_PIN);
+  Serial.print(I2S0_LRCLK_PIN);
   Serial.print("): ");
-  Serial.println(digitalRead(I2S_LRCLK_PIN) ? "HIGH" : "LOW");
+  Serial.println(digitalRead(I2S0_LRCLK_PIN) ? "HIGH" : "LOW");
   
   Serial.print("  DOUT (GPIO ");
-  Serial.print(I2S_DOUT_PIN);
+  Serial.print(I2S0_DOUT_PIN);
   Serial.print("): ");
-  Serial.println(digitalRead(I2S_DOUT_PIN) ? "HIGH" : "LOW");
+  Serial.println(digitalRead(I2S0_DOUT_PIN) ? "HIGH" : "LOW");
+  
+  Serial.print("  DIN (GPIO ");
+  Serial.print(I2S0_DIN_PIN);
+  Serial.print("): ");
+  Serial.println(digitalRead(I2S0_DIN_PIN) ? "HIGH" : "LOW");
+
+  Serial.println("I2S1 Audio Pins (Ringer):");
+  Serial.print("  BCLK (GPIO ");
+  Serial.print(I2S1_BCLK_PIN);
+  Serial.print("): ");
+  Serial.println(digitalRead(I2S1_BCLK_PIN) ? "HIGH" : "LOW");
+  
+  Serial.print("  LRCLK (GPIO ");
+  Serial.print(I2S1_LRCLK_PIN);
+  Serial.print("): ");
+  Serial.println(digitalRead(I2S1_LRCLK_PIN) ? "HIGH" : "LOW");
+  
+  Serial.print("  DOUT (GPIO ");
+  Serial.print(I2S1_DOUT_PIN);
+  Serial.print("): ");
+  Serial.println(digitalRead(I2S1_DOUT_PIN) ? "HIGH" : "LOW");
   
   // Amplifier control pins
   Serial.println("Amplifier Control:");
@@ -713,16 +734,18 @@ void testPinStates() {
   Serial.print("): ");
   Serial.println(digitalRead(ROTARY_ACTIVE_PIN) ? "IDLE" : "DIALING");
   
-  // ADC pin (microphone)
-  Serial.println("Analog Input:");
-  Serial.print("  Microphone ADC (GPIO ");
-  Serial.print(MIC_ADC_PIN);
+  // ICS-43434 Digital Microphone
+  Serial.println("Digital Microphone:");
+  Serial.print("  ICS-43434 Data (GPIO ");
+  Serial.print(MIC_SD_PIN);
   Serial.print("): ");
-  int micValue = analogRead(MIC_ADC_PIN);
-  Serial.print(micValue);
-  Serial.print(" (");
-  Serial.print((micValue * 3.3) / 4095.0, 2);
-  Serial.println("V)");
+  Serial.println(digitalRead(MIC_SD_PIN) ? "HIGH" : "LOW");
+  Serial.print("  Shares I2S0 Clock (GPIO ");
+  Serial.print(MIC_SCK_PIN);
+  Serial.print(", ");
+  Serial.print(MIC_WS_PIN);
+  Serial.println(")");
+  Serial.println("  Digital MEMS microphone - no ADC needed!");
   
   Serial.println("=====================================");
 }
